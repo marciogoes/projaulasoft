@@ -1,11 +1,11 @@
 # =================================================================
-# install.ps1 — Instala as dependências Python de todos os serviços
+# install.ps1 - Instala dependencias Python de todos os servicos
 # =================================================================
 # Uso (primeira vez):
 #   .\scripts\install.ps1
 #
 # Executa `python -m pip install -r requirements.txt` em cada um
-# dos 4 serviços. Rode uma vez antes do primeiro .\start.ps1.
+# dos 4 servicos. Rode uma vez antes do primeiro .\start.ps1.
 # =================================================================
 
 $ErrorActionPreference = "Stop"
@@ -31,7 +31,7 @@ foreach ($svc in $servicos) {
     Push-Location $path
     try {
         python -m pip install -r requirements.txt -q
-        Write-Host "  OK" -ForegroundColor Green
+        Write-Host "  [OK]" -ForegroundColor Green
     } catch {
         Write-Host "  ERRO: $_" -ForegroundColor Red
     }
