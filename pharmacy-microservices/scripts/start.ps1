@@ -6,9 +6,13 @@
 #
 # O que faz:
 #   1. Abre 4 janelas PowerShell - uma para cada microsservico
-#   2. Abre uma 5a janela servindo o frontend estatico
+#   2. Abre uma 5a janela servindo o frontend estatico na porta 5500
 #   3. Aguarda os servicos responderem
-#   4. Abre o navegador em http://localhost:5000
+#   4. Abre o navegador em http://localhost:5500
+#
+# Nota sobre a porta 5500:
+#   Usamos 5500 em vez de 5000 porque o Windows as vezes reserva a
+#   porta 5000 para servicos proprios (UPnP, Settings, etc.).
 #
 # Para parar tudo:
 #   .\scripts\stop.ps1
@@ -18,6 +22,9 @@ $ErrorActionPreference = "Stop"
 
 # Pasta raiz do projeto (1 nivel acima de scripts/)
 $ROOT = Split-Path -Parent $PSScriptRoot
+
+# Porta do frontend
+$FRONTEND_PORT = 5500
 
 function Start-MicroService {
     param(
@@ -44,6 +51,20 @@ function Test-PortOpen {
     while ($elapsed -lt $TimeoutSeconds) {
         try {
             $r = Invoke-WebRequest -Uri "http://localhost:$Port/health" -TimeoutSec 1 -ErrorAction Stop -UseBasicParsing
+            if ($r.StatusCode -eq 200) { return $true }
+        } catch { }
+        Start-Sleep -Milliseconds 500
+        $elapsed += 0.5
+    }
+    return $false
+}
+
+function Test-FrontendOpen {
+    param([int]$Port, [int]$TimeoutSeconds = 10)
+    $elapsed = 0
+    while ($elapsed -lt $TimeoutSeconds) {
+        try {
+            $r = Invoke-WebRequest -Uri "http://localhost:$Port/" -TimeoutSec 1 -ErrorAction Stop -UseBasicParsing
             if ($r.StatusCode -eq 200) { return $true }
         } catch { }
         Start-Sleep -Milliseconds 500
@@ -100,17 +121,23 @@ Write-Host ""
 Write-Host "[3/3] Subindo frontend estatico..." -ForegroundColor White
 $frontendPath = Join-Path $ROOT "frontend"
 if (Test-Path $frontendPath) {
-    Write-Host "  ->  frontend em :5000" -ForegroundColor Cyan
+    Write-Host "  ->  frontend em :$FRONTEND_PORT" -ForegroundColor Cyan
     Start-Process powershell -ArgumentList @(
         '-NoExit',
         '-Command',
-        "`$host.ui.RawUI.WindowTitle = 'frontend (:5000)'; cd '$frontendPath'; python -m http.server 5000"
+        "`$host.ui.RawUI.WindowTitle = 'frontend (:$FRONTEND_PORT)'; cd '$frontendPath'; python -m http.server $FRONTEND_PORT"
     )
-    Start-Sleep -Seconds 2
 
-    Write-Host ""
-    Write-Host "Abrindo navegador em http://localhost:5000" -ForegroundColor Green
-    Start-Process "http://localhost:5000"
+    # Espera o frontend responder antes de abrir o navegador
+    if (Test-FrontendOpen -Port $FRONTEND_PORT -TimeoutSeconds 10) {
+        Write-Host ("  [OK]  {0,-20} :{1}" -f "frontend", $FRONTEND_PORT) -ForegroundColor Green
+        Write-Host ""
+        Write-Host "Abrindo navegador em http://localhost:$FRONTEND_PORT" -ForegroundColor Green
+        Start-Process "http://localhost:$FRONTEND_PORT"
+    } else {
+        Write-Host ("  [X]   frontend nao respondeu na porta {0}" -f $FRONTEND_PORT) -ForegroundColor Red
+        Write-Host "        Verifique a janela do frontend aberta para ver o erro." -ForegroundColor Yellow
+    }
 } else {
     Write-Host "  AVISO: pasta frontend/ nao encontrada - pulando" -ForegroundColor Yellow
 }
@@ -121,7 +148,7 @@ Write-Host "================================================" -ForegroundColor G
 Write-Host "  Sistema no ar                                 " -ForegroundColor Green
 Write-Host "================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  Frontend:  " -NoNewline; Write-Host "http://localhost:5000" -ForegroundColor Cyan
+Write-Host "  Frontend:  " -NoNewline; Write-Host "http://localhost:$FRONTEND_PORT" -ForegroundColor Cyan
 Write-Host "  Gateway:   " -NoNewline; Write-Host "http://localhost:8000/docs" -ForegroundColor Cyan
 Write-Host "  Product:   " -NoNewline; Write-Host "http://localhost:8001/docs" -ForegroundColor Cyan
 Write-Host "  Inventory: " -NoNewline; Write-Host "http://localhost:8002/docs" -ForegroundColor Cyan
@@ -132,5 +159,4 @@ Write-Host "    python scripts\seed_data.py" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  Parar tudo:"
 Write-Host "    .\scripts\stop.ps1" -ForegroundColor Yellow
-Write-Host "    (ou feche as 5 janelas PowerShell abertas)"
 Write-Host ""
