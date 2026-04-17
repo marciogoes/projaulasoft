@@ -19,6 +19,7 @@ import os
 from typing import Any
 import httpx
 from fastapi import FastAPI, Request, Response, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- Configuração dos serviços downstream -------------------------
 PRODUCT_URL = os.getenv("PRODUCT_SERVICE_URL", "http://localhost:8001")
@@ -43,6 +44,18 @@ app = FastAPI(
         "Consulte a documentação Swagger de cada serviço em sua porta dedicada."
     ),
     version="1.0.0",
+)
+
+# --- CORS ---------------------------------------------------------
+# Didático: CORS (Cross-Origin Resource Sharing) permite que um frontend
+# servido em outra origem (ex: http://localhost:5000) consuma esta API.
+# Em produção, restrinja `allow_origins` aos domínios reais do frontend.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # DEMO: libera qualquer origem
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

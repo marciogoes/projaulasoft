@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pharmacy Console · Demo</title>
+
+<!-- Fontes: Fraunces (display, editorial) + Figtree (body) + JetBrains Mono (code) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,500&family=Figtree:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ===================================================================
+   PHARMACY CONSOLE — Demo interface for microservices
+   Estética: apotecário editorial / cores de papel, sálvia, terracota
+   =================================================================== */
+
+:root {
+  --bg:           #F6F1E6;
+  --bg-paper:     #FDFBF5;
+  --ink:          #1C1E26;
+  --ink-soft:     #3D4046;
+  --sage:         #5B7761;
+  --sage-dark:    #3E5443;
+  --sage-faint:   rgba(91, 119, 97, 0.08);
+  --terracotta:   #B8543A;
+  --terracotta-d: #8F3F2A;
+  --gold:         #A88754;
+  --cream:        #EDE5D3;
+  --border:       #D8CEB8;
+  --border-dark:  #8C7F62;
+  --muted:        #6B6456;
+  --danger:       #B53A2E;
+  --success:      #5B7761;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Figtree', system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--ink);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% 15%, rgba(168, 135, 84, 0.07) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 85%, rgba(91, 119, 97, 0.05) 0%, transparent 55%);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Fraunces', 'Times New Roman', serif;
+  font-weight: 600;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+
+code, .mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.82em;
+}
+
+button { font-family: inherit; }
+
+/* -------------------------------------------------------------------
+   LAYOUT
+   ------------------------------------------------------------------- */
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 40px 48px 120px;
+}
+
+/* -------------------------------------------------------------------
+   HEADER
+   ------------------------------------------------------------------- */
+header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: end;
+  gap: 40px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.brand-mark {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--sage);
+  display: grid; place-items: center;
+  color: var(--bg-paper);
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 32px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(91, 119, 97, 0.25);
+}
+
+.brand-text h1 {
+  font-size: 28px;
+  line-height: 1.1;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.brand-text .tagline {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.header-meta {
+  text-align: right;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.header-meta strong {
+  display: block;
+  font-family: 'Fraunces', serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  font-style: italic;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* -------------------------------------------------------------------
+   HEALTH STRIP — status dos 4 serviços
+   ------------------------------------------------------------------- */
+.health {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 24px;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--sage);
+  margin-bottom: 40px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+
+.health-label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.health-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.health-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+}
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+  display: inline-block;
+}
+.dot.ok      { background: var(--sage); box-shadow: 0 0 0 3px var(--sage-faint); }
+.dot.down    { background: var(--danger); }
+.dot.pending { background: var(--gold); animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50%     { opacity: 0.3; }
+}
+
+/* -------------------------------------------------------------------
+   TABS
+   ------------------------------------------------------------------- */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 14px 24px 12px;
+  font-family: 'Figtree', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 150ms, border-color 150ms;
+  position: relative;
+  letter-spacing: 0.02em;
+}
+
+.tab:hover { color: var(--ink); }
+
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--terracotta);
+  font-weight: 600;
+}
+
+.tab-counter {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--cream);
+  color: var(--muted);
+  border-radius: 10px;
+  font-weight: 500;
+}
+.tab.active .tab-counter {
+  background: var(--terracotta);
+  color: var(--bg-paper);
+}
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; animation: fadeIn 260ms ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* -------------------------------------------------------------------
+   SECTIONS / GRID
+   ------------------------------------------------------------------- */
+.section-title {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+  font-weight: 500;
+  margin-bottom: 16px;
+  font-family: 'Figtree', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.grid-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 900px) {
+  .grid-split { grid-template-columns: 1fr; }
+  header { grid-template-columns: 1fr; gap: 20px; }
+  .header-meta { text-align: left; }
+  .container { padding: 24px; }
+}
+
+/* -------------------------------------------------------------------
+   CARD / FORM
+   ------------------------------------------------------------------- */
+.card {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  padding: 28px;
+  position: relative;
+}
+
+.card-title {
+  font-size: 20px;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-style: italic;
+  margin-bottom: 6px;
+}
+.card-subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.field input[type="text"],
+.field input[type="number"],
+.field select {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  transition: border-color 150ms, background 150ms;
+}
+
+.field input:focus, .field select:focus {
+  outline: none;
+  border-color: var(--sage);
+  background: var(--bg-paper);
+  box-shadow: 0 0 0 3px var(--sage-faint);
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+.checkbox-field:hover { background: var(--cream); }
+.checkbox-field input { accent-color: var(--sage); }
+.checkbox-field span { font-size: 13px; color: var(--ink-soft); }
+
+/* -------------------------------------------------------------------
+   BUTTONS
+   ------------------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 22px;
+  background: var(--ink);
+  color: var(--bg-paper);
+  border: none;
+  cursor: pointer;
+  font-family: 'Figtree', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  transition: background 150ms, transform 120ms;
+}
+.btn:hover { background: var(--sage-dark); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-primary { background: var(--terracotta); }
+.btn-primary:hover { background: var(--terracotta-d); }
+
+.btn-sage { background: var(--sage); }
+.btn-sage:hover { background: var(--sage-dark); }
+
+.btn-full { width: 100%; }
+
+.btn-ghost {
+  background: none;
+  color: var(--muted);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.btn-ghost:hover { background: var(--cream); color: var(--ink); }
+
+/* -------------------------------------------------------------------
+   TABLES
+   ------------------------------------------------------------------- */
+.table-wrap {
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  text-align: left;
+  padding: 14px 20px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--cream);
+  font-family: 'Figtree', sans-serif;
+}
+
+tbody td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-soft);
+  vertical-align: middle;
+}
+
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--cream); }
+
+td .id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+td .name {
+  font-weight: 500;
+  color: var(--ink);
+}
+td .sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+td .price {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--ink);
+}
+td.qty {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 500;
+}
+
+.empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+  font-family: 'Fraunces', serif;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  border-radius: 12px;
+  font-weight: 500;
+}
+.badge-sage      { background: var(--sage-faint); color: var(--sage-dark); }
+.badge-danger    { background: rgba(181, 58, 46, 0.1); color: var(--danger); }
+.badge-rx        { background: rgba(168, 135, 84, 0.15); color: var(--gold); border: 1px solid var(--gold); }
+
+.row-low {
+  background: rgba(181, 58, 46, 0.04) !important;
+  border-left: 3px solid var(--danger);
+}
+
+/* -------------------------------------------------------------------
+   VENDAS
+   ------------------------------------------------------------------- */
+.sale-item-row {
+  display: grid;
+  grid-template-columns: 1fr 100px auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sale-item-row .btn-remove {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 16px;
+  width: 38px;
+  cursor: pointer;
+  line-height: 1;
+}
+.sale-item-row .btn-remove:hover { color: var(--danger); border-color: var(--danger); }
+
+.add-item-link {
+  font-size: 13px;
+  color: var(--sage-dark);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.add-item-link:hover { color: var(--ink); }
+
+.sale-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 16px 0;
+  margin: 16px 0;
+  border-top: 1px dashed var(--border-dark);
+  border-bottom: 1px dashed var(--border-dark);
+}
+.sale-total-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.sale-total-value {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--terracotta-d);
+}
+
+/* -------------------------------------------------------------------
+   ACTIVITY LOG — painel inferior
+   ------------------------------------------------------------------- */
+.activity-toggle {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--ink);
+  color: var(--bg-paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  z-index: 100;
+  border-top: 1px solid var(--border-dark);
+}
+
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 24px;
+  cursor: pointer;
+  user-select: none;
+}
+.activity-header:hover { background: #25282F; }
+
+.activity-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+}
+.activity-title::before {
+  content: '';
+  width: 8px; height: 8px;
+  background: var(--sage);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.activity-count {
+  color: var(--gold);
+}
+
+.activity-body {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 4px 24px 16px;
+  display: none;
+  border-top: 1px solid #2B2E36;
+}
+.activity-body.open { display: block; }
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 70px 60px 1fr auto;
+  gap: 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid #25282F;
+  color: #A8A398;
+}
+.log-entry:last-child { border-bottom: none; }
+
+.log-method {
+  font-weight: 500;
+  text-align: center;
+}
+.log-method.GET    { color: #7FA88F; }
+.log-method.POST   { color: #D8A068; }
+.log-method.PATCH  { color: #9B8FBE; }
+.log-method.DELETE { color: #C67A72; }
+
+.log-status-ok  { color: var(--sage); }
+.log-status-err { color: #E8856E; }
+
+.log-time {
+  color: #666359;
+}
+
+/* Toasts */
+.toast-wrap {
+  position: fixed;
+  top: 24px; right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.toast {
+  padding: 14px 20px;
+  background: var(--bg-paper);
+  border-left: 3px solid var(--sage);
+  box-shadow: 0 8px 32px rgba(28, 30, 38, 0.12);
+  min-width: 280px;
+  font-size: 14px;
+  animation: slideIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.toast.error { border-left-color: var(--danger); }
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* -------------------------------------------------------------------
+   HINT / BANNER
+   ------------------------------------------------------------------- */
+.hint {
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--bg-paper);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+}
+.hint-label {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--gold);
+  white-space: nowrap;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- ================================= HEADER ================================= -->
+  <header>
+    <div class="brand">
+      <div class="brand-mark">℞</div>
+      <div class="brand-text">
+        <h1>Pharmacy Console</h1>
+        <div class="tagline">Demo · Sistema de Gestão</div>
+      </div>
+    </div>
+    <div></div>
+    <div class="header-meta">
+      <strong>TEADS0354</strong>
+      Práticas de Engenharia de Software<br>
+      UFPA · TADS 2026.1
+    </div>
+  </header>
+
+  <!-- ============================= HEALTH STRIP ============================== -->
+  <div class="health">
+    <span class="health-label">Status do sistema</span>
+    <div class="health-items" id="health-items">
+      <span class="health-item"><span class="dot pending"></span> Gateway</span>
+      <span class="health-item"><span class="dot pending"></span> Product</span>
+      <span class="health-item"><span class="dot pending"></span> Inventory</span>
+      <span class="health-item"><span class="dot pending"></span> Sales</span>
+    </div>
+  </div>
+
+  <div class="hint">
+    <span class="hint-label">Como usar</span>
+    <span>Este console consome a API do gateway em <code>http://localhost:8000</code>. Observe o log de requisições no rodapé — cada ação aqui é uma chamada HTTP real a um microsserviço.</span>
+  </div>
+
+  <!-- ================================ TABS =================================== -->
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="catalog">Catálogo <span class="tab-counter" id="counter-catalog">0</span></button>
+    <button class="tab" data-tab="stock">Estoque <span class="tab-counter" id="counter-stock">0</span></button>
+    <button class="tab" data-tab="sales">Vendas <span class="tab-counter" id="counter-sales">0</span></button>
+  </div>
+
+  <!-- ============================ TAB: CATÁLOGO ============================== -->
+  <section class="tab-panel active" id="panel-catalog">
+    <div class="grid-split">
+
+      <div class="card">
+        <div class="card-title">Cadastrar medicamento</div>
+        <div class="card-subtitle">POST /api/products</div>
+
+        <form id="form-product" onsubmit="return false;">
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" name="nome" required placeholder="Ex: Dipirona 500mg">
+          </div>
+          <div class="field">
+            <label>Código de barras</label>
+            <input type="text" name="codigo_barras" required placeholder="Ex: 7891234567890" minlength="8">
+          </div>
+          <div class="field">
+            <label>Fabricante</label>
+            <input type="text" name="fabricante" required placeholder="Ex: EMS">
+          </div>
+          <div class="field">
+            <label>Preço (R$)</label>
+            <input type="number" name="preco" step="0.01" min="0.01" required placeholder="0,00">
+          </div>
+          <label class="checkbox-field">
+            <input type="checkbox" name="requer_receita">
+            <span>Requer receita médica</span>
+          </label>
+          <button class="btn btn-primary btn-full" onclick="criarProduto()">Cadastrar</button>
+        </form>
+      </div>
+
+      <div>
+        <div class="section-title">Medicamentos cadastrados</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Medicamento</th>
+                <th>Fabricante</th>
+                <th style="text-align:right">Preço</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody-products">
+              <tr><td colspan="5" class="empty">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================ TAB: ESTOQUE =============================== -->
+  <section class="tab-panel" id="panel-stock">
+    <div class="grid-split">
+
+      <div class="card">
+        <div class="card-title">Movimentar estoque</div>
+        <div class="card-subtitle">POST /api/inventory/movements</div>
+
+        <form id="form-movement" onsubmit="return false;">
+          <div class="field">
+            <label>Produto</label>
+            <select name="produto_id" required id="select-product-mov">
+              <option value="">Selecione…</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Tipo</label>
+              <select name="tipo" required>
+                <option value="ENTRADA">Entrada</option>
+                <option value="SAIDA">Saída</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Quantidade</label>
+              <input type="number" name="quantidade" min="1" required placeholder="0">
+            </div>
+          </div>
+          <div class="field">
+            <label>Observação</label>
+            <input type="text" name="observacao" placeholder="Opcional">
+          </div>
+          <button class="btn btn-sage btn-full" onclick="criarMovimento()">Registrar movimento</button>
+        </form>
+      </div>
+
+      <div>
+        <div class="section-title">Estoque atual</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th style="text-align:right">Quantidade</th>
+                <th style="text-align:right">Mínimo</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-stock">
+              <tr><td colspan="4" class="empty">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================ TAB: VENDAS ================================ -->
+  <section class="tab-panel" id="panel-sales">
+    <div class="grid-split">
+
+      <div class="card">
+        <div class="card-title">Nova venda</div>
+        <div class="card-subtitle">POST /api/sales · orquestração SAGA</div>
+
+        <form id="form-sale" onsubmit="return false;">
+          <div class="field">
+            <label>Cliente (opcional)</label>
+            <input type="text" name="cliente" placeholder="Ex: Maria Silva">
+          </div>
+
+          <label style="display:block; font-size:12px; font-weight:500; color:var(--ink-soft); margin-bottom:10px; text-transform:uppercase; letter-spacing:0.08em;">Itens</label>
+          <div id="sale-items">
+            <!-- linhas dinâmicas -->
+          </div>
+          <button type="button" class="add-item-link" onclick="addSaleItem()">+ adicionar item</button>
+
+          <div class="sale-total">
+            <span class="sale-total-label">Total estimado</span>
+            <span class="sale-total-value" id="sale-total">R$ 0,00</span>
+          </div>
+
+          <button class="btn btn-primary btn-full" onclick="criarVenda()">Finalizar venda</button>
+        </form>
+      </div>
+
+      <div>
+        <div class="section-title">Vendas registradas</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Itens</th>
+                <th style="text-align:right">Total</th>
+                <th>Quando</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-sales">
+              <tr><td colspan="5" class="empty">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</div>
+
+<!-- ================================ TOASTS ================================== -->
+<div class="toast-wrap" id="toasts"></div>
+
+<!-- ============================ ACTIVITY LOG =============================== -->
+<div class="activity-toggle">
+  <div class="activity-header" onclick="toggleLog()">
+    <span class="activity-title">
+      Activity log
+      <span class="activity-count" id="log-count">0 chamadas</span>
+    </span>
+    <span id="log-chevron">▲</span>
+  </div>
+  <div class="activity-body" id="log-body">
+    <!-- entradas dinâmicas -->
+  </div>
+</div>
+
+<!-- ==================================== JS ================================= -->
+<script>
+// ====================================================================
+// PHARMACY CONSOLE — API client (vanilla JS, zero dependências)
+// ====================================================================
+
+const GATEWAY = 'http://localhost:8000';
+
+// Cache local de produtos (para montar selects e calcular totais)
+let produtosCache = [];
+
+// ------------------- HTTP client instrumentado ----------------------
+async function api(method, path, body = null) {
+  const url = GATEWAY + path;
+  const t0 = performance.now();
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  let response, data = null, status = 0, errorMsg = null;
+  try {
+    response = await fetch(url, opts);
+    status = response.status;
+    const text = await response.text();
+    data = text ? JSON.parse(text) : null;
+    if (!response.ok) errorMsg = data?.detail || `HTTP ${status}`;
+  } catch (e) {
+    errorMsg = e.message;
+    status = 0;
+  }
+  const dt = Math.round(performance.now() - t0);
+
+  logRequest({ method, path, status, dt, error: errorMsg });
+  if (errorMsg) throw new Error(errorMsg);
+  return data;
+}
+
+// ------------------- Activity log -----------------------------------
+const logEntries = [];
+function logRequest({ method, path, status, dt, error }) {
+  const time = new Date().toLocaleTimeString('pt-BR');
+  const ok = status >= 200 && status < 300;
+  logEntries.unshift({ time, method, path, status, dt, ok, error });
+  if (logEntries.length > 50) logEntries.pop();
+  renderLog();
+}
+
+function renderLog() {
+  const body = document.getElementById('log-body');
+  document.getElementById('log-count').textContent = `${logEntries.length} chamada${logEntries.length === 1 ? '' : 's'}`;
+  body.innerHTML = logEntries.map(e => `
+    <div class="log-entry">
+      <span class="log-method ${e.method}">${e.method}</span>
+      <span class="${e.ok ? 'log-status-ok' : 'log-status-err'}">${e.status || 'ERR'}</span>
+      <span>${e.path}${e.error ? ` <span class="log-status-err">· ${e.error}</span>` : ''}</span>
+      <span class="log-time">${e.dt}ms · ${e.time}</span>
+    </div>
+  `).join('');
+}
+
+function toggleLog() {
+  const body = document.getElementById('log-body');
+  const chev = document.getElementById('log-chevron');
+  body.classList.toggle('open');
+  chev.textContent = body.classList.contains('open') ? '▼' : '▲';
+}
+
+// ------------------- Toasts -----------------------------------------
+function toast(msg, type = 'ok') {
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type === 'error' ? ' error' : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+
+// ------------------- Health check -----------------------------------
+async function checkHealth() {
+  try {
+    const h = await api('GET', '/health');
+    renderHealth(h);
+  } catch (_) {
+    renderHealth({ gateway: 'down', services: { product: 'down', inventory: 'down', sales: 'down' } });
+  }
+}
+
+function renderHealth(h) {
+  const items = [
+    { label: 'Gateway',   state: h.gateway === 'ok' ? 'ok' : 'down' },
+    { label: 'Product',   state: h.services?.product === 'ok' ? 'ok' : 'down' },
+    { label: 'Inventory', state: h.services?.inventory === 'ok' ? 'ok' : 'down' },
+    { label: 'Sales',     state: h.services?.sales === 'ok' ? 'ok' : 'down' }
+  ];
+  document.getElementById('health-items').innerHTML = items.map(i => `
+    <span class="health-item"><span class="dot ${i.state}"></span> ${i.label}</span>
+  `).join('');
+}
+
+// ------------------- Tabs -------------------------------------------
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+// ====================================================================
+// CATÁLOGO
+// ====================================================================
+async function carregarProdutos() {
+  try {
+    const data = await api('GET', '/api/products');
+    produtosCache = data;
+    document.getElementById('counter-catalog').textContent = data.length;
+    renderProducts(data);
+    popularSelectProdutos();
+  } catch (e) { /* log já cuidou */ }
+}
+
+function renderProducts(produtos) {
+  const tb = document.getElementById('tbody-products');
+  if (!produtos.length) {
+    tb.innerHTML = `<tr><td colspan="5" class="empty">Nenhum medicamento cadastrado</td></tr>`;
+    return;
+  }
+  tb.innerHTML = produtos.map(p => `
+    <tr>
+      <td><span class="id">#${p.id}</span></td>
+      <td>
+        <div class="name">${escapeHtml(p.nome)}</div>
+        <div class="sub mono">${p.codigo_barras}</div>
+      </td>
+      <td>${escapeHtml(p.fabricante)}</td>
+      <td style="text-align:right"><span class="price">R$ ${p.preco.toFixed(2).replace('.', ',')}</span></td>
+      <td>${p.requer_receita ? '<span class="badge badge-rx">℞ receita</span>' : ''}</td>
+    </tr>
+  `).join('');
+}
+
+async function criarProduto() {
+  const f = document.getElementById('form-product');
+  const payload = {
+    nome: f.nome.value.trim(),
+    codigo_barras: f.codigo_barras.value.trim(),
+    fabricante: f.fabricante.value.trim(),
+    preco: parseFloat(f.preco.value),
+    requer_receita: f.requer_receita.checked,
+  };
+  if (!payload.nome || !payload.codigo_barras || !payload.fabricante || !(payload.preco > 0)) {
+    toast('Preencha todos os campos.', 'error');
+    return;
+  }
+  try {
+    await api('POST', '/api/products', payload);
+    toast(`✓ ${payload.nome} cadastrado`);
+    f.reset();
+    await carregarProdutos();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+// ====================================================================
+// ESTOQUE
+// ====================================================================
+async function carregarEstoque() {
+  try {
+    const data = await api('GET', '/api/inventory/stock');
+    document.getElementById('counter-stock').textContent = data.length;
+    renderStock(data);
+  } catch (e) { /* */ }
+}
+
+function renderStock(stocks) {
+  const tb = document.getElementById('tbody-stock');
+  if (!stocks.length) {
+    tb.innerHTML = `<tr><td colspan="4" class="empty">Nenhum estoque registrado</td></tr>`;
+    return;
+  }
+  tb.innerHTML = stocks.map(s => {
+    const prod = produtosCache.find(p => p.id === s.produto_id);
+    const nome = prod ? escapeHtml(prod.nome) : `Produto #${s.produto_id}`;
+    const baixo = s.quantidade <= s.estoque_minimo;
+    return `
+      <tr class="${baixo ? 'row-low' : ''}">
+        <td>
+          <div class="name">${nome}</div>
+          <div class="sub mono">#${s.produto_id}</div>
+        </td>
+        <td class="qty" style="text-align:right">${s.quantidade}</td>
+        <td class="qty" style="text-align:right; color:var(--muted)">${s.estoque_minimo}</td>
+        <td>
+          ${baixo
+            ? '<span class="badge badge-danger">estoque baixo</span>'
+            : '<span class="badge badge-sage">ok</span>'}
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function popularSelectProdutos() {
+  const opts = ['<option value="">Selecione…</option>']
+    .concat(produtosCache.map(p =>
+      `<option value="${p.id}" data-preco="${p.preco}">#${p.id} · ${escapeHtml(p.nome)}</option>`
+    )).join('');
+  document.getElementById('select-product-mov').innerHTML = opts;
+  document.querySelectorAll('.sale-item-select').forEach(s => {
+    const val = s.value;
+    s.innerHTML = opts;
+    if (val) s.value = val;
+  });
+}
+
+async function criarMovimento() {
+  const f = document.getElementById('form-movement');
+  const payload = {
+    produto_id: parseInt(f.produto_id.value),
+    tipo: f.tipo.value,
+    quantidade: parseInt(f.quantidade.value),
+    observacao: f.observacao.value.trim() || null,
+  };
+  if (!payload.produto_id || !(payload.quantidade > 0)) {
+    toast('Selecione um produto e informe quantidade.', 'error');
+    return;
+  }
+  try {
+    await api('POST', '/api/inventory/movements', payload);
+    toast(`✓ ${payload.tipo} de ${payload.quantidade} unidade(s)`);
+    f.reset();
+    await carregarEstoque();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+// ====================================================================
+// VENDAS
+// ====================================================================
+function addSaleItem() {
+  const container = document.getElementById('sale-items');
+  const row = document.createElement('div');
+  row.className = 'sale-item-row';
+  row.innerHTML = `
+    <select class="sale-item-select" onchange="recalcTotal()">
+      <option value="">Selecione…</option>
+      ${produtosCache.map(p => `<option value="${p.id}" data-preco="${p.preco}">#${p.id} · ${escapeHtml(p.nome)}</option>`).join('')}
+    </select>
+    <input type="number" min="1" value="1" placeholder="Qtd" class="sale-item-qty" oninput="recalcTotal()">
+    <button type="button" class="btn-remove" onclick="this.parentElement.remove(); recalcTotal();">×</button>
+  `;
+  container.appendChild(row);
+}
+
+function recalcTotal() {
+  let total = 0;
+  document.querySelectorAll('#sale-items .sale-item-row').forEach(row => {
+    const sel = row.querySelector('.sale-item-select');
+    const qty = parseInt(row.querySelector('.sale-item-qty').value) || 0;
+    const opt = sel.selectedOptions[0];
+    const preco = parseFloat(opt?.dataset.preco || 0);
+    total += preco * qty;
+  });
+  document.getElementById('sale-total').textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
+}
+
+async function criarVenda() {
+  const f = document.getElementById('form-sale');
+  const itens = [];
+  document.querySelectorAll('#sale-items .sale-item-row').forEach(row => {
+    const produto_id = parseInt(row.querySelector('.sale-item-select').value);
+    const quantidade = parseInt(row.querySelector('.sale-item-qty').value);
+    if (produto_id && quantidade > 0) itens.push({ produto_id, quantidade });
+  });
+  if (!itens.length) {
+    toast('Adicione pelo menos um item à venda.', 'error');
+    return;
+  }
+  const payload = {
+    cliente: f.cliente.value.trim() || null,
+    itens,
+  };
+  try {
+    const venda = await api('POST', '/api/sales', payload);
+    toast(`✓ Venda #${venda.id} registrada — R$ ${venda.total.toFixed(2).replace('.', ',')}`);
+    f.reset();
+    document.getElementById('sale-items').innerHTML = '';
+    addSaleItem();
+    recalcTotal();
+    await carregarVendas();
+    // Importante: o estoque foi decrementado pelo evento. Recarrega para provar!
+    await carregarEstoque();
+  } catch (e) {
+    toast('Erro: ' + e.message, 'error');
+  }
+}
+
+async function carregarVendas() {
+  try {
+    const data = await api('GET', '/api/sales');
+    document.getElementById('counter-sales').textContent = data.length;
+    renderSales(data);
+  } catch (e) { /* */ }
+}
+
+function renderSales(vendas) {
+  const tb = document.getElementById('tbody-sales');
+  if (!vendas.length) {
+    tb.innerHTML = `<tr><td colspan="5" class="empty">Nenhuma venda registrada</td></tr>`;
+    return;
+  }
+  tb.innerHTML = vendas.map(v => `
+    <tr>
+      <td><span class="id">#${v.id}</span></td>
+      <td>${v.cliente ? escapeHtml(v.cliente) : '<em style="color:var(--muted)">—</em>'}</td>
+      <td>${v.itens.length} item${v.itens.length > 1 ? 's' : ''}</td>
+      <td style="text-align:right"><span class="price">R$ ${v.total.toFixed(2).replace('.', ',')}</span></td>
+      <td class="mono" style="color:var(--muted); font-size:12px">${fmtDate(v.criado_em)}</td>
+    </tr>
+  `).join('');
+}
+
+// ------------------- Utils ------------------------------------------
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', {
+      day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    });
+  } catch { return iso; }
+}
+
+// ====================================================================
+// BOOTSTRAP
+// ====================================================================
+(async function init() {
+  await checkHealth();
+  setInterval(checkHealth, 8000);
+
+  await carregarProdutos();
+  await carregarEstoque();
+  await carregarVendas();
+
+  // Começa com um item vazio na venda
+  addSaleItem();
+})();
+</script>
+
+</body>
+</html>
