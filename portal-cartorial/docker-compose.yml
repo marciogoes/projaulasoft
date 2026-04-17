@@ -1,0 +1,195 @@
+# Portal Cartorial — Docker Compose
+# C2: Container Diagram em código
+# Cada service corresponde a um Container do diagrama C2
+#
+# Uso: docker compose up -d
+# Parar:  docker compose down
+# Logs:   docker compose logs -f [service]
+
+version: "3.9"
+
+services:
+
+  # ── C2: Database [PostgreSQL] ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: cartorial_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-portal_cartorial}
+      POSTGRES_USER: ${POSTGRES_USER:-cartorial}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cartorial_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cartorial}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cartorial_net
+
+  # ── C2: Cache / Queue [Redis] ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: cartorial_redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD:-redis_secret}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cartorial_net
+
+  # ── C2: File Storage [MinIO] ───────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: cartorial_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio_secret}
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Console web
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - cartorial_net
+
+  # ── C2: Auth Service [Keycloak] ────────────────────────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:23-0
+    container_name: cartorial_keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: ${KC_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin_secret}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-portal_cartorial}
+      KC_DB_USERNAME: ${POSTGRES_USER:-cartorial}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-cartorial_secret}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./infra/keycloak/realm-cartorial.json:/opt/keycloak/data/import/realm.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cartorial_net
+
+  # ── C2: API Backend [NestJS] ───────────────────────────────────────────────
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cartorial_api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cartorial}:${POSTGRES_PASSWORD:-cartorial_secret}@postgres:5432/${POSTGRES_DB:-portal_cartorial}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio_secret}
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_REALM: cartorial
+      KEYCLOAK_CLIENT_ID: ${KC_CLIENT_ID:-portal-api}
+      KEYCLOAK_CLIENT_SECRET: ${KC_CLIENT_SECRET:-client_secret}
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_change_in_production}
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend/src:/app/src  # hot-reload em desenvolvimento
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - cartorial_net
+
+  # ── C2: Worker Service [Bull] ──────────────────────────────────────────────
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cartorial_worker
+    restart: unless-stopped
+    command: npm run start:worker
+    environment:
+      NODE_ENV: development
+      WORKER_MODE: "true"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cartorial}:${POSTGRES_PASSWORD:-cartorial_secret}@postgres:5432/${POSTGRES_DB:-portal_cartorial}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret}@redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minio_secret}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cartorial_net
+
+  # ── C2: Web App [Next.js] ──────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: cartorial_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NEXTAUTH_URL: http://localhost:3001
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-nextauth_secret}
+      KEYCLOAK_CLIENT_ID: ${KC_WEB_CLIENT_ID:-portal-web}
+      KEYCLOAK_CLIENT_SECRET: ${KC_WEB_CLIENT_SECRET:-web_client_secret}
+      KEYCLOAK_ISSUER: http://localhost:8080/realms/cartorial
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      - api
+    networks:
+      - cartorial_net
+
+# ── Volumes ────────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+# ── Networks ───────────────────────────────────────────────────────────────────
+networks:
+  cartorial_net:
+    driver: bridge

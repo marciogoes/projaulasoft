@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Ambientes virtuais
+venv/
+env/
+.venv/
+ENV/
+
+# Banco de dados (SQLite) — cada serviço gera o seu
+*.db
+*.db-journal
+data/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Env files (nunca commitar!)
+.env
+.env.local
+
+# Docker
+*.pid

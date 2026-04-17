@@ -1,0 +1,73 @@
+{
+  "realm": "cartorial",
+  "displayName": "Portal Cartorial",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt-BR"],
+  "defaultLocale": "pt-BR",
+  "roles": {
+    "realm": [
+      { "name": "cidadao",   "description": "Cidadao - acesso ao portal" },
+      { "name": "atendente", "description": "Atendente cartorial - backoffice" },
+      { "name": "admin",     "description": "Administrador do sistema" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "portal-api",
+      "name": "Portal Cartorial API",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "portal-api-secret-change-in-prod",
+      "bearerOnly": false,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": true
+    },
+    {
+      "clientId": "portal-web",
+      "name": "Portal Cartorial Web",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "redirectUris": [
+        "http://localhost:3001/*",
+        "https://portal.cartorial.tjpa.jus.br/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3001",
+        "https://portal.cartorial.tjpa.jus.br"
+      ],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "defaultClientScopes": ["openid", "profile", "email", "roles"]
+    }
+  ],
+  "users": [
+    {
+      "username": "cidadao",
+      "email": "cidadao@example.com",
+      "firstName": "Cidadao",
+      "lastName": "Demo",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "senha123", "temporary": false }],
+      "realmRoles": ["cidadao"]
+    },
+    {
+      "username": "atendente",
+      "email": "atendente@cartorio.gov.br",
+      "firstName": "Atendente",
+      "lastName": "Demo",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "senha123", "temporary": false }],
+      "realmRoles": ["atendente"]
+    }
+  ]
+}

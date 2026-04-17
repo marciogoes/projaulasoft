@@ -1,0 +1,153 @@
+# =============================================================
+# .github/workflows/ci.yml
+# =============================================================
+# Pipeline de Integração Contínua (CI) do projeto.
+#
+# Didático (Aula 10 — Integração Contínua):
+#  - Dispara em cada push/PR para main e develop
+#  - Job 1 — lint: verifica formatação com ruff
+#  - Job 2 — test: roda pytest em cada serviço (em paralelo via matrix)
+#  - Job 3 — build: valida que os Dockerfiles compilam
+#
+# Alunos devem observar:
+#  - Uso de `matrix` para paralelizar execução por serviço
+#  - Cache de dependências pip
+#  - Separação em jobs distintos (falhar cedo)
+# =============================================================
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # -------------------------------------------------------------
+  # JOB 1 — Lint: verificação estática de código
+  # -------------------------------------------------------------
+  lint:
+    name: 🔍 Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar ruff
+        run: pip install ruff==0.6.9
+
+      - name: Executar lint
+        run: ruff check services/
+
+  # -------------------------------------------------------------
+  # JOB 2 — Testes unitários/integração por serviço (matrix)
+  # -------------------------------------------------------------
+  test:
+    name: 🧪 Testes — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false       # não cancela os outros se um falhar
+      matrix:
+        service:
+          - product-service
+          - inventory-service
+          - sales-service
+          - api-gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: services/${{ matrix.service }}/requirements.txt
+
+      - name: Instalar dependências
+        working-directory: services/${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Executar pytest
+        working-directory: services/${{ matrix.service }}
+        run: python -m pytest -v --tb=short
+
+  # -------------------------------------------------------------
+  # JOB 3 — Build: valida que as imagens Docker compilam
+  # -------------------------------------------------------------
+  build:
+    name: 🐳 Build Docker — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    needs: [lint, test]        # só roda se lint+test passaram
+    strategy:
+      matrix:
+        service:
+          - product-service
+          - inventory-service
+          - sales-service
+          - api-gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: ./services/${{ matrix.service }}
+          push: false
+          load: true
+          tags: pharmacy/${{ matrix.service }}:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # -------------------------------------------------------------
+  # JOB 4 — Smoke test: sobe docker-compose e testa health
+  # -------------------------------------------------------------
+  smoke:
+    name: 🚬 Smoke test (docker-compose)
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Subir sistema
+        run: docker compose up -d --build
+
+      - name: Aguardar serviços ficarem saudáveis
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "✅ Gateway respondendo"
+              break
+            fi
+            echo "⏳ Aguardando... ($i/30)"
+            sleep 2
+          done
+
+      - name: Verificar health agregado
+        run: |
+          RESPONSE=$(curl -s http://localhost:8000/health)
+          echo "Resposta: $RESPONSE"
+          echo "$RESPONSE" | grep -q '"gateway":"ok"' || exit 1
+
+      - name: Rodar seed
+        run: python scripts/seed_data.py
+        continue-on-error: true
+
+      - name: Logs em caso de falha
+        if: failure()
+        run: docker compose logs
+
+      - name: Derrubar ambiente
+        if: always()
+        run: docker compose down -v

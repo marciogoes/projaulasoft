@@ -1,0 +1,129 @@
+# ===================================================================
+# docker-compose.yml
+# ===================================================================
+# Orquestra os 4 componentes do sistema: 3 microserviços + gateway.
+#
+# Cada serviço:
+#  - Possui Dockerfile próprio (build independente)
+#  - Tem porta exposta distinta
+#  - Persiste dados em volume próprio (database per service)
+#  - Conhece os outros via variáveis de ambiente
+#
+# Didático: o objetivo é demonstrar que cada serviço é autônomo.
+# ===================================================================
+
+version: "3.9"
+
+services:
+  # -----------------------------------------------------------------
+  # PRODUCT SERVICE — Catálogo de medicamentos
+  # -----------------------------------------------------------------
+  product-service:
+    build: ./services/product-service
+    container_name: pharmacy-product-service
+    ports:
+      - "8001:8001"
+    volumes:
+      - product_data:/app/data
+    environment:
+      - SERVICE_NAME=product-service
+      - PORT=8001
+      - DATABASE_URL=sqlite:///./data/products.db
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health').raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pharmacy-net
+
+  # -----------------------------------------------------------------
+  # INVENTORY SERVICE — Controle de estoque
+  # -----------------------------------------------------------------
+  inventory-service:
+    build: ./services/inventory-service
+    container_name: pharmacy-inventory-service
+    ports:
+      - "8002:8002"
+    volumes:
+      - inventory_data:/app/data
+    environment:
+      - SERVICE_NAME=inventory-service
+      - PORT=8002
+      - DATABASE_URL=sqlite:///./data/inventory.db
+      - PRODUCT_SERVICE_URL=http://product-service:8001
+      - ESTOQUE_MINIMO_PADRAO=10
+    depends_on:
+      product-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8002/health').raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pharmacy-net
+
+  # -----------------------------------------------------------------
+  # SALES SERVICE — Registro de vendas
+  # -----------------------------------------------------------------
+  sales-service:
+    build: ./services/sales-service
+    container_name: pharmacy-sales-service
+    ports:
+      - "8003:8003"
+    volumes:
+      - sales_data:/app/data
+    environment:
+      - SERVICE_NAME=sales-service
+      - PORT=8003
+      - DATABASE_URL=sqlite:///./data/sales.db
+      - PRODUCT_SERVICE_URL=http://product-service:8001
+      - INVENTORY_SERVICE_URL=http://inventory-service:8002
+    depends_on:
+      product-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8003/health').raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pharmacy-net
+
+  # -----------------------------------------------------------------
+  # API GATEWAY — Ponto único de entrada
+  # -----------------------------------------------------------------
+  api-gateway:
+    build: ./services/api-gateway
+    container_name: pharmacy-api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVICE_NAME=api-gateway
+      - PORT=8000
+      - PRODUCT_SERVICE_URL=http://product-service:8001
+      - INVENTORY_SERVICE_URL=http://inventory-service:8002
+      - SALES_SERVICE_URL=http://sales-service:8003
+    depends_on:
+      product-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+      sales-service:
+        condition: service_healthy
+    networks:
+      - pharmacy-net
+
+# Volumes nomeados — persistem os SQLite entre reinícios
+volumes:
+  product_data:
+  inventory_data:
+  sales_data:
+
+# Rede interna — permite comunicação entre serviços por nome
+networks:
+  pharmacy-net:
+    driver: bridge
