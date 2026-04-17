@@ -9,11 +9,20 @@ serviço. Cada serviço é o dono do seu esquema.
 A integridade referencial é mantida pela camada de aplicação
 (validando no product-service antes de criar o estoque).
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from sqlalchemy import String, Integer, DateTime, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
+
+
+def _now_utc() -> datetime:
+    """
+    Retorna o datetime atual em UTC (timezone-aware).
+
+    Substitui `datetime.utcnow()` (deprecated no Python 3.12+).
+    """
+    return datetime.now(timezone.utc)
 
 
 class TipoMovimento(str, PyEnum):
@@ -36,7 +45,7 @@ class StockItem(Base):
     quantidade: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     estoque_minimo: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     atualizado_em: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=_now_utc, onupdate=_now_utc
     )
 
     movements: Mapped[list["Movement"]] = relationship(
@@ -64,6 +73,6 @@ class Movement(Base):
         String(100), nullable=True, index=True,
         doc="ID de venda, compra ou outro evento que originou o movimento"
     )
-    criado_em: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    criado_em: Mapped[datetime] = mapped_column(DateTime, default=_now_utc)
 
     stock_item: Mapped["StockItem"] = relationship(back_populates="movements")
